@@ -1,6 +1,7 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.command.PullImageResultCallback
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.api.model.Info
 import com.github.dockerjava.api.model.Version
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 @Service
 class DockerApiService {
@@ -45,4 +47,13 @@ class DockerApiService {
     fun listOfImages(client: DockerClient?): MutableList<Image>? = client?.listImagesCmd()?.exec()
 
     fun listOfContainers(client: DockerClient?) = client?.listContainersCmd()?.exec()
+
+    fun pullImage(client: DockerClient?, image: ru.cib.clusterizer.dao.rest.Image): String {
+        val result = client?.pullImageCmd(image.name)?.exec(PullImageResultCallback())?.awaitCompletion(30, TimeUnit.SECONDS)
+        return if (result == true) {
+            "Image ${image.name}:${image.tag} downloaded"
+        } else {
+            "Fail during download"
+        }
+    }
 }

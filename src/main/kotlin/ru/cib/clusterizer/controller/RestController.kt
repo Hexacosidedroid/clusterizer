@@ -38,4 +38,8 @@ class RestController(
 
     @GetMapping("/listOfContainers")
     fun getListOfContainers() = dockerApiService.listOfContainers(client)
+
+    @PostMapping("/pullImage")
+    fun pullImageOnHost(@RequestBody image: ru.cib.clusterizer.dao.rest.Image) =
+        dockerApiService.pullImage(client, image)
 }
