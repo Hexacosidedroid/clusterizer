@@ -1,9 +1,12 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.model.Image
+import com.github.dockerjava.api.model.Info
+import com.github.dockerjava.api.model.Version
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
-import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
 import org.springframework.stereotype.Service
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
@@ -12,7 +15,7 @@ import java.time.Duration
 @Service
 class DockerApiService {
 
-    fun connectToDocker(host: String, registry: Registry?, tls: Tls?): DockerClient {
+    fun connect(host: String, registry: Registry?, tls: Tls?): DockerClient {
         val dockerConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().apply {
             withDockerHost(host)
             withDockerTlsVerify(tls?.verify)
@@ -21,7 +24,7 @@ class DockerApiService {
             withRegistryUsername(registry?.user)
             withRegistryPassword(registry?.password)
         }.build()
-        val httpClient = ApacheDockerHttpClient.Builder().apply {
+        val httpClient = ZerodepDockerHttpClient.Builder().apply {
             dockerHost(dockerConfig.dockerHost)
             sslConfig(dockerConfig.sslConfig)
             maxConnections(100)
@@ -31,17 +34,15 @@ class DockerApiService {
         return DockerClientImpl.getInstance(dockerConfig, httpClient)
     }
 
-    fun pingDocker(client: DockerClient) {
-        client.pingCmd().exec()
+    fun ping(client: DockerClient?) {
+        client?.pingCmd()?.exec()
     }
 
-    fun listOfDockerImages(client: DockerClient) {
-        val listOfImages = client.listImagesCmd().exec()
-//        val list = listOfImages.map { rawImage ->
-//            Image(
-//                created = rawImage.created
-//
-//            )
-//        }.toMutableList()
-    }
+    fun info(client: DockerClient?): Info? = client?.infoCmd()?.exec()
+
+    fun version(client: DockerClient?): Version? = client?.versionCmd()?.exec()
+
+    fun listOfImages(client: DockerClient?): MutableList<Image>? = client?.listImagesCmd()?.exec()
+
+    fun listOfContainers(client: DockerClient?) = client?.listContainersCmd()?.exec()
 }

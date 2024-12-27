@@ -1,5 +1,9 @@
 package ru.cib.clusterizer.controller
 
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.model.Image
+import com.github.dockerjava.api.model.Info
+import com.github.dockerjava.api.model.Version
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -13,18 +17,25 @@ import ru.cib.clusterizer.service.DockerApiService
 class RestController(
     val dockerApiService: DockerApiService
 ) {
+    var client: DockerClient? = null
 
-    @PostMapping("/setDockerConnection")
-    fun setDockerConnection(@RequestBody config: DockerConfig) {
-        val client = dockerApiService.connectToDocker(
+    @PostMapping("/connect")
+    fun setDockerConnection(@RequestBody config: DockerConfig): Version? {
+        client = dockerApiService.connect(
             config.host,
             Registry(config.url, config.user, config.password),
             Tls(config.verify, config.certPath)
         )
-        dockerApiService.pingDocker(client)
+        dockerApiService.ping(client)
+        return dockerApiService.version(client)
     }
 
     @GetMapping("/listOfImages")
-    fun getListOfImages() {
-    }
+    fun getListOfImages() = dockerApiService.listOfImages(client)
+
+    @GetMapping("/info")
+    fun getInfo() = dockerApiService.info(client)
+
+    @GetMapping("/listOfContainers")
+    fun getListOfContainers() = dockerApiService.listOfContainers(client)
 }
