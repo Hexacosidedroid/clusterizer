@@ -1,7 +1,7 @@
 package ru.cib.clusterizer.dao.docker
 
 data class Registry (
-    var url: String?,
-    var user: String?,
-    var password: String?
+    val url: String?,
+    val user: String?,
+    val password: String?
 )
