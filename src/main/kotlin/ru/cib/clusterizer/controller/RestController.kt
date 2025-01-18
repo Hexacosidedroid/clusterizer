@@ -32,20 +32,20 @@ class RestController(
     }
 
     @GetMapping("/listOfImages")
-    fun getListOfImages() = dockerApiService.listOfImages(client)
+    fun getListOfImages() = ResponseEntity(dockerApiService.listOfImages(client), HttpStatus.OK)
 
     @GetMapping("/info")
-    fun getInfo() = dockerApiService.info(client)
+    fun getInfo() = ResponseEntity(dockerApiService.info(client), HttpStatus.OK)
 
     @GetMapping("/listOfContainers")
-    fun getListOfContainers() = dockerApiService.listOfContainers(client)
+    fun getListOfContainers() = ResponseEntity(dockerApiService.listOfContainers(client), HttpStatus.OK)
 
     @PostMapping("/pullImage")
-    fun pullImageOnHost(@RequestBody request: ImageRequest) {
+    fun pullImageOnHost(@RequestBody request: ImageRequest): ResponseEntity<Any> {
         val result = dockerApiService.pullImage(client, request)
-        if (result == true)
-            ResponseEntity<String>(HttpStatus.OK)
+        return if (result == true)
+            ResponseEntity<Any>(HttpStatus.OK)
         else
-            ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR)
+            ResponseEntity<Any>(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 }
