@@ -8,32 +8,40 @@ import com.github.dockerjava.api.model.Version
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
+import ru.cib.clusterizer.dao.rest.ImageRequest
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 @Service
 class DockerApiService {
 
+    private val logger = LoggerFactory.getLogger(DockerApiService::class.java)
+
     fun connect(host: String, registry: Registry?, tls: Tls?): DockerClient {
-        val dockerConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().apply {
-            withDockerHost(host)
-            withDockerTlsVerify(tls?.verify)
-            withDockerCertPath(tls?.certPath)
-            withRegistryUrl(registry?.url)
-            withRegistryUsername(registry?.user)
-            withRegistryPassword(registry?.password)
-        }.build()
-        val httpClient = ZerodepDockerHttpClient.Builder().apply {
-            dockerHost(dockerConfig.dockerHost)
-            sslConfig(dockerConfig.sslConfig)
-            maxConnections(100)
-            connectionTimeout(Duration.ofSeconds(30))
-            responseTimeout(Duration.ofSeconds(45))
-        }.build()
-        return DockerClientImpl.getInstance(dockerConfig, httpClient)
+        try {
+            val dockerConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().apply {
+                withDockerHost(host)
+                withDockerTlsVerify(tls?.verify)
+                withDockerCertPath(tls?.certPath)
+                withRegistryUrl(registry?.url)
+                withRegistryUsername(registry?.user)
+                withRegistryPassword(registry?.password)
+            }.build()
+            val httpClient = ZerodepDockerHttpClient.Builder().apply {
+                dockerHost(dockerConfig.dockerHost)
+                sslConfig(dockerConfig.sslConfig)
+                maxConnections(100)
+                connectionTimeout(Duration.ofSeconds(30))
+                responseTimeout(Duration.ofSeconds(45))
+            }.build()
+            return DockerClientImpl.getInstance(dockerConfig, httpClient)
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        }
     }
 
     fun ping(client: DockerClient?) {
@@ -46,14 +54,17 @@ class DockerApiService {
 
     fun listOfImages(client: DockerClient?): MutableList<Image>? = client?.listImagesCmd()?.exec()
 
-    fun listOfContainers(client: DockerClient?) = client?.listContainersCmd()?.exec()
+    fun listOfContainers(client: DockerClient?) = try {
+        client?.listContainersCmd()?.exec()
+    } catch (e: Exception) {
+        throw RuntimeException(e)
+    }
 
-    fun pullImage(client: DockerClient?, image: ru.cib.clusterizer.dao.rest.Image): String {
-        val result = client?.pullImageCmd(image.name)?.exec(PullImageResultCallback())?.awaitCompletion(30, TimeUnit.SECONDS)
-        return if (result == true) {
-            "Image ${image.name}:${image.tag} downloaded"
-        } else {
-            "Fail during download"
-        }
+    fun pullImage(client: DockerClient?, imageRequest: ImageRequest) = try {
+        client?.pullImageCmd("${imageRequest.name}:${imageRequest.tag}")?.exec(PullImageResultCallback())
+            ?.awaitCompletion(30, TimeUnit.SECONDS)
+    } catch (e: Exception) {
+        logger.error("Failed to pull image ${imageRequest.name}:${imageRequest.tag}", e)
+        false
     }
 }

@@ -1,6 +1,6 @@
 package ru.cib.clusterizer.dao.rest
 
-data class DockerConfig (
+data class DockerConfigRequest (
     val host: String,
     val verify: String?,
     val certPath: String?,
