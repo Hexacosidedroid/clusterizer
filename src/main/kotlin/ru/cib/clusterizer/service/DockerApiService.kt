@@ -1,6 +1,7 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.async.ResultCallback.Adapter
 import com.github.dockerjava.api.async.ResultCallbackTemplate
 import com.github.dockerjava.api.command.PullImageResultCallback
@@ -15,9 +16,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
-import ru.cib.clusterizer.dao.rest.ImageIdRequest
+import ru.cib.clusterizer.dao.rest.ContainerIdRequest
 import ru.cib.clusterizer.dao.rest.ImageRequest
-import ru.cib.clusterizer.dao.rest.ImageSearchRequest
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -50,13 +50,27 @@ class DockerApiService {
         }
     }
 
-    fun ping(client: DockerClient?) {
+    fun ping(client: DockerClient?) = try {
         client?.pingCmd()?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Error server is unreachable", e)
+        false
     }
 
-    fun info(client: DockerClient?): Info? = client?.infoCmd()?.exec()
+    fun info(client: DockerClient?) = try {
+        client?.infoCmd()?.exec()
+    } catch (e: Exception) {
+        logger.error("Error server is unreachable", e)
+        throw RuntimeException(e)
+    }
 
-    fun version(client: DockerClient?): Version? = client?.versionCmd()?.exec()
+    fun version(client: DockerClient?) = try {
+        client?.versionCmd()?.exec()
+    } catch (e: Exception) {
+        logger.error("Error server is unreachable", e)
+        throw RuntimeException(e)
+    }
 
     /* Methods for work with images on host */
 
@@ -76,18 +90,18 @@ class DockerApiService {
         false
     }
 
-    fun searchImages(client: DockerClient?, request: ImageSearchRequest) = try {
-        client?.searchImagesCmd(request.term)?.exec()
+    fun searchImages(client: DockerClient?, term: String) = try {
+        client?.searchImagesCmd(term)?.exec()
     } catch (e: Exception) {
-        logger.error("Failed to search images for request term ${request.term}", e)
+        logger.error("Failed to search images for request term $term", e)
         throw RuntimeException(e)
     }
 
-    fun removeImage(client: DockerClient?, request: ImageIdRequest) = try {
-        client?.removeImageCmd(request.id)?.exec()
+    fun removeImage(client: DockerClient?, id: String) = try {
+        client?.removeImageCmd(id)?.exec()
         true
     } catch (e: Exception) {
-        logger.error("Failed to remove image by id ${request.id}", e)
+        logger.error("Failed to remove image by id $id", e)
         false
     }
 
@@ -98,10 +112,10 @@ class DockerApiService {
         throw RuntimeException(e)
     }
 
-    fun inspectImage(client: DockerClient?, request: ImageIdRequest) = try {
-        client?.inspectImageCmd(request.id)?.exec()
+    fun inspectImage(client: DockerClient?, id: String) = try {
+        client?.inspectImageCmd(id)?.exec()
     } catch (e: Exception) {
-        logger.error("Failed to inspect image ${request.id}", e)
+        logger.error("Failed to inspect image $id", e)
         throw RuntimeException(e)
     }
 
@@ -114,4 +128,33 @@ class DockerApiService {
         throw RuntimeException(e)
     }
 
+    fun createContainer(client: DockerClient?, imageRequest: ImageRequest) = try {
+        client?.createContainerCmd(imageRequest.name)?.exec()
+    } catch (e: Exception) {
+        logger.error("Failed to create container", e)
+        throw RuntimeException(e)
+    }
+
+    fun startContainer(client: DockerClient?, containerId: ContainerIdRequest) = try {
+        client?.startContainerCmd(containerId.id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to start container", e)
+        false
+    }
+
+    fun inspectContainer(client: DockerClient?, containerId: ContainerIdRequest) = try {
+        client?.inspectContainerCmd(containerId.id)?.exec()
+    } catch (e: Exception) {
+        logger.error("Failed to inspect container", e)
+        throw RuntimeException(e)
+    }
+
+    fun removeContainer(client: DockerClient?, containerId: ContainerIdRequest) = try {
+        client?.removeContainerCmd(containerId.id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to remove container", e)
+        false
+    }
 }

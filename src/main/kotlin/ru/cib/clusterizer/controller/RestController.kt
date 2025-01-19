@@ -4,9 +4,7 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Version
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
@@ -31,21 +29,90 @@ class RestController(
         return dockerApiService.version(client)
     }
 
-    @GetMapping("/listOfImages")
-    fun getListOfImages() = ResponseEntity(dockerApiService.listOfImages(client), HttpStatus.OK)
+    @GetMapping("/ping")
+    fun getPing(): ResponseEntity<String> {
+        val result = dockerApiService.ping(client)
+        return if (result) {
+            ResponseEntity(HttpStatus.OK)
+        } else {
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
 
     @GetMapping("/info")
-    fun getInfo() = ResponseEntity(dockerApiService.info(client), HttpStatus.OK)
+    fun getInfo(): ResponseEntity<Any> {
+        val result = dockerApiService.info(client)
+        return if (result != null) {
+            ResponseEntity(result, HttpStatus.OK)
+        } else {
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    @GetMapping("/version")
+    fun getVersion(): ResponseEntity<Any> {
+        val result = dockerApiService.version(client)
+        return if (result != null) {
+            ResponseEntity(result, HttpStatus.OK)
+        } else {
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    @PostMapping("/pullImage")
+    fun pullImage(@RequestBody request: ImageRequest): ResponseEntity<Any> {
+        val result = dockerApiService.pullImage(client, request)
+        return if (result == true)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @PostMapping("/pushImage")
+    fun pushImage(@RequestBody request: ImageRequest): ResponseEntity<Any> {
+        val result = dockerApiService.pushImage(client, request)
+        return if (result == true)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/searchImages")
+    fun searchImages(@RequestParam("search") term: String): ResponseEntity<Any> {
+        val result = dockerApiService.searchImages(client, term)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @DeleteMapping("/removeImage")
+    fun removeImage(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.removeImage(client, id)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/inspectImage")
+    fun inspectImage(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.inspectImage(client, id)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/listOfImages")
+    fun getListOfImages(): ResponseEntity<Any> {
+        val result = dockerApiService.listOfImages(client)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
 
     @GetMapping("/listOfContainers")
     fun getListOfContainers() = ResponseEntity(dockerApiService.listOfContainers(client), HttpStatus.OK)
-
-    @PostMapping("/pullImage")
-    fun pullImageOnHost(@RequestBody request: ImageRequest): ResponseEntity<Any> {
-        val result = dockerApiService.pullImage(client, request)
-        return if (result == true)
-            ResponseEntity<Any>(HttpStatus.OK)
-        else
-            ResponseEntity<Any>(HttpStatus.INTERNAL_SERVER_ERROR)
-    }
 }
