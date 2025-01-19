@@ -1,7 +1,9 @@
 package ru.cib.clusterizer.controller
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.model.Container
 import com.github.dockerjava.api.model.Version
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -114,5 +116,47 @@ class RestController(
     }
 
     @GetMapping("/listOfContainers")
-    fun getListOfContainers() = ResponseEntity(dockerApiService.listOfContainers(client), HttpStatus.OK)
+    fun getListOfContainers(): ResponseEntity<Any> {
+        val result = dockerApiService.listOfContainers(client)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @PostMapping("/createContainer")
+    fun createContainer(@RequestBody request: ImageRequest): ResponseEntity<Any> {
+        val result = dockerApiService.createContainer(client, request)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @PostMapping("/startContainer")
+    fun startContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.startContainer(client, id)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/inspectContainer")
+    fun inspectContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.inspectContainer(client, id)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @DeleteMapping("/removeContainer")
+    fun removeContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.removeContainer(client, id)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
 }

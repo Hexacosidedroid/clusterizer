@@ -1,13 +1,8 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.api.async.ResultCallback
-import com.github.dockerjava.api.async.ResultCallback.Adapter
-import com.github.dockerjava.api.async.ResultCallbackTemplate
 import com.github.dockerjava.api.command.PullImageResultCallback
 import com.github.dockerjava.api.model.Image
-import com.github.dockerjava.api.model.Info
-import com.github.dockerjava.api.model.Version
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.core.command.PushImageResultCallback
@@ -74,19 +69,19 @@ class DockerApiService {
 
     /* Methods for work with images on host */
 
-    fun pullImage(client: DockerClient?, imageRequest: ImageRequest) = try {
-        client?.pullImageCmd("${imageRequest.name}:${imageRequest.tag}")?.exec(PullImageResultCallback())
+    fun pullImage(client: DockerClient?, request: ImageRequest) = try {
+        client?.pullImageCmd("${request.name}:${request.tag}")?.exec(PullImageResultCallback())
             ?.awaitCompletion(30, TimeUnit.SECONDS)
     } catch (e: Exception) {
-        logger.error("Failed to pull image ${imageRequest.name}:${imageRequest.tag}", e)
+        logger.error("Failed to pull image ${request.name}:${request.tag}", e)
         false
     }
 
-    fun pushImage(client: DockerClient?, imageRequest: ImageRequest) = try {
-        client?.pushImageCmd("${imageRequest.name}:${imageRequest.tag}")?.exec(PushImageResultCallback())
+    fun pushImage(client: DockerClient?, request: ImageRequest) = try {
+        client?.pushImageCmd("${request.name}:${request.tag}")?.exec(PushImageResultCallback())
             ?.awaitCompletion(30, TimeUnit.SECONDS)
     } catch (e: Exception) {
-        logger.error("Failed to push image ${imageRequest.name}:${imageRequest.tag}", e)
+        logger.error("Failed to push image ${request.name}:${request.tag}", e)
         false
     }
 
@@ -128,30 +123,30 @@ class DockerApiService {
         throw RuntimeException(e)
     }
 
-    fun createContainer(client: DockerClient?, imageRequest: ImageRequest) = try {
-        client?.createContainerCmd(imageRequest.name)?.exec()
+    fun createContainer(client: DockerClient?, request: ImageRequest) = try {
+        client?.createContainerCmd("${request.name}:${request.tag}")?.exec()
     } catch (e: Exception) {
         logger.error("Failed to create container", e)
         throw RuntimeException(e)
     }
 
-    fun startContainer(client: DockerClient?, containerId: ContainerIdRequest) = try {
-        client?.startContainerCmd(containerId.id)?.exec()
+    fun startContainer(client: DockerClient?, id: String) = try {
+        client?.startContainerCmd(id)?.exec()
         true
     } catch (e: Exception) {
         logger.error("Failed to start container", e)
         false
     }
 
-    fun inspectContainer(client: DockerClient?, containerId: ContainerIdRequest) = try {
-        client?.inspectContainerCmd(containerId.id)?.exec()
+    fun inspectContainer(client: DockerClient?, id: String) = try {
+        client?.inspectContainerCmd(id)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to inspect container", e)
         throw RuntimeException(e)
     }
 
-    fun removeContainer(client: DockerClient?, containerId: ContainerIdRequest) = try {
-        client?.removeContainerCmd(containerId.id)?.exec()
+    fun removeContainer(client: DockerClient?, id: String) = try {
+        client?.removeContainerCmd(id)?.exec()
         true
     } catch (e: Exception) {
         logger.error("Failed to remove container", e)
