@@ -116,8 +116,8 @@ class RestController(
     }
 
     @GetMapping("/listOfContainers")
-    fun getListOfContainers(): ResponseEntity<Any> {
-        val result = dockerApiService.listOfContainers(client)
+    fun getListOfContainers(@RequestParam("all") all: Boolean): ResponseEntity<Any> {
+        val result = dockerApiService.listOfContainers(client, all)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -159,4 +159,23 @@ class RestController(
         else
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
+
+    @PostMapping("/stopContainer")
+    fun stopContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.stopContainer(client, id)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/topContainer")
+    fun topContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.topContainer(client, id)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
 }

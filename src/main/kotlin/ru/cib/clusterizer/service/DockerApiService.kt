@@ -116,8 +116,8 @@ class DockerApiService {
 
     /*Methods for work with containers */
 
-    fun listOfContainers(client: DockerClient?) = try {
-        client?.listContainersCmd()?.exec()
+    fun listOfContainers(client: DockerClient?, all: Boolean) = try {
+        client?.listContainersCmd()?.withShowAll(all)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to load list of containers", e)
         throw RuntimeException(e)
@@ -151,5 +151,20 @@ class DockerApiService {
     } catch (e: Exception) {
         logger.error("Failed to remove container", e)
         false
+    }
+
+    fun stopContainer(client: DockerClient?, id: String) = try {
+        client?.stopContainerCmd(id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to stop container", e)
+        false
+    }
+
+    fun topContainer(client: DockerClient?, id: String) = try {
+        client?.topContainerCmd(id)?.exec()
+    } catch (e: Exception) {
+        logger.error("Failed to execute top in container", e)
+        throw RuntimeException(e)
     }
 }
