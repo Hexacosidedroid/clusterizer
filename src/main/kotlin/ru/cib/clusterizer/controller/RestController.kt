@@ -152,8 +152,8 @@ class RestController(
     }
 
     @DeleteMapping("/removeContainer")
-    fun removeContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
-        val result = dockerApiService.removeContainer(client, id)
+    fun removeContainer(@RequestParam("id") id: String, @RequestParam("force") force: Boolean): ResponseEntity<Any> {
+        val result = dockerApiService.removeContainer(client, id, force)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else

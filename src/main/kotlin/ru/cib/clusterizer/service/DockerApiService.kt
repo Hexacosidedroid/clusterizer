@@ -145,8 +145,8 @@ class DockerApiService {
         throw RuntimeException(e)
     }
 
-    fun removeContainer(client: DockerClient?, id: String) = try {
-        client?.removeContainerCmd(id)?.exec()
+    fun removeContainer(client: DockerClient?, id: String, force: Boolean) = try {
+        client?.removeContainerCmd(id)?.withForce(force)?.exec()
         true
     } catch (e: Exception) {
         logger.error("Failed to remove container", e)
