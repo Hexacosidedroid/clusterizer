@@ -134,14 +134,14 @@ class DockerApiService {
         client?.startContainerCmd(id)?.exec()
         true
     } catch (e: Exception) {
-        logger.error("Failed to start container", e)
+        logger.error("Failed to start container $id", e)
         false
     }
 
     fun inspectContainer(client: DockerClient?, id: String) = try {
         client?.inspectContainerCmd(id)?.exec()
     } catch (e: Exception) {
-        logger.error("Failed to inspect container", e)
+        logger.error("Failed to inspect container $id", e)
         throw RuntimeException(e)
     }
 
@@ -149,22 +149,52 @@ class DockerApiService {
         client?.removeContainerCmd(id)?.withForce(force)?.exec()
         true
     } catch (e: Exception) {
-        logger.error("Failed to remove container", e)
+        logger.error("Failed to remove container $id", e)
         false
+    }
+
+    fun diffContainer(client: DockerClient?, id: String) = try {
+        client?.containerDiffCmd(id)?.exec()
+    } catch (e: Exception) {
+        logger.error("Failed to make diff for container $id", e)
     }
 
     fun stopContainer(client: DockerClient?, id: String) = try {
         client?.stopContainerCmd(id)?.exec()
         true
     } catch (e: Exception) {
-        logger.error("Failed to stop container", e)
+        logger.error("Failed to stop container $id", e)
+        false
+    }
+
+    fun killContainer(client: DockerClient?, id: String) = try {
+        client?.killContainerCmd(id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to kill container $id", e)
+        false
+    }
+
+    fun renameContainer(client: DockerClient?, id: String, name: String) = try {
+        client?.renameContainerCmd(id)?.withName(name)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to rename container $id", e)
+        false
+    }
+
+    fun restartContainer(client: DockerClient?, id: String) = try {
+        client?.restartContainerCmd(id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to restart container $id", e)
         false
     }
 
     fun topContainer(client: DockerClient?, id: String) = try {
         client?.topContainerCmd(id)?.exec()
     } catch (e: Exception) {
-        logger.error("Failed to execute top in container", e)
+        logger.error("Failed to execute top in container $id", e)
         throw RuntimeException(e)
     }
 }

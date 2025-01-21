@@ -160,9 +160,45 @@ class RestController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
+    @GetMapping("/diffContainer")
+    fun diffContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.diffContainer(client, id)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
     @PostMapping("/stopContainer")
     fun stopContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
         val result = dockerApiService.stopContainer(client, id)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @DeleteMapping("/killContainer")
+    fun killContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.killContainer(client, id)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @PostMapping("/renameContainer")
+    fun renameContainer(@RequestParam("id") id: String, @RequestParam("name") name: String): ResponseEntity<Any> {
+        val result = dockerApiService.renameContainer(client, id, name)
+        return if (result)
+            ResponseEntity(HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @PostMapping("/restartContainer")
+    fun restartContainer(@RequestParam("id") id: String): ResponseEntity<Any> {
+        val result = dockerApiService.restartContainer(client, id)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
