@@ -77,9 +77,13 @@
             <artifactId>docker-java-core</artifactId>
             <version>3.4.1</version>
         </dependency>
-
-
-
+        <!--Reactive-->
+        <dependency>
+            <groupId>io.reactivex.rxjava3</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>3.1.10</version>
+        </dependency>
+        <!--Tests-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
