@@ -1,10 +1,14 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback.Adapter
+import com.github.dockerjava.api.async.ResultCallbackTemplate
 import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
+import com.github.dockerjava.core.command.EventsResultCallback
 import com.github.dockerjava.core.command.PushImageResultCallback
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
 import org.slf4j.LoggerFactory
@@ -41,7 +45,7 @@ class DockerApiService {
             }.build()
             return DockerClientImpl.getInstance(dockerConfig, httpClient)
         } catch (e: Exception) {
-            throw RuntimeException(e)
+            throw e
         }
     }
 
@@ -57,24 +61,25 @@ class DockerApiService {
         client?.infoCmd()?.exec()
     } catch (e: Exception) {
         logger.error("Error server is unreachable", e)
-        throw RuntimeException(e)
+        throw e
     }
 
     fun version(client: DockerClient?) = try {
         client?.versionCmd()?.exec()
     } catch (e: Exception) {
         logger.error("Error server is unreachable", e)
-        throw RuntimeException(e)
+        throw e
     }
 
-    /* Methods for work with images on host */
+    /*Methods for work with images on host*/
 
     fun pullImage(client: DockerClient?, request: ImageRequest) = try {
-        client?.pullImageCmd("${request.name}:${request.tag}")?.exec(PullImageResultCallback())
-            ?.awaitCompletion(30, TimeUnit.SECONDS)
+//        val result = client?.pullImageCmd("${request.name}:${request.tag}")?.exec(Adapter<Frame> {
+//
+//        }) //TODO
     } catch (e: Exception) {
         logger.error("Failed to pull image ${request.name}:${request.tag}", e)
-        false
+        throw e
     }
 
     fun pushImage(client: DockerClient?, request: ImageRequest) = try {
@@ -89,7 +94,7 @@ class DockerApiService {
         client?.searchImagesCmd(term)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to search images for request term $term", e)
-        throw RuntimeException(e)
+        throw e
     }
 
     fun removeImage(client: DockerClient?, id: String) = try {
@@ -104,30 +109,30 @@ class DockerApiService {
         client?.listImagesCmd()?.exec()
     } catch (e: Exception) {
         logger.error("Failed to load list of images", e)
-        throw RuntimeException(e)
+        throw e
     }
 
     fun inspectImage(client: DockerClient?, id: String) = try {
         client?.inspectImageCmd(id)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to inspect image $id", e)
-        throw RuntimeException(e)
+        throw e
     }
 
-    /*Methods for work with containers */
+    /*Methods for work with containers*/
 
     fun listOfContainers(client: DockerClient?, all: Boolean) = try {
         client?.listContainersCmd()?.withShowAll(all)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to load list of containers", e)
-        throw RuntimeException(e)
+        throw e
     }
 
     fun createContainer(client: DockerClient?, request: ImageRequest) = try {
         client?.createContainerCmd("${request.name}:${request.tag}")?.exec()
     } catch (e: Exception) {
         logger.error("Failed to create container", e)
-        throw RuntimeException(e)
+        throw e
     }
 
     fun startContainer(client: DockerClient?, id: String) = try {
@@ -142,7 +147,7 @@ class DockerApiService {
         client?.inspectContainerCmd(id)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to inspect container $id", e)
-        throw RuntimeException(e)
+        throw e
     }
 
     fun removeContainer(client: DockerClient?, id: String, force: Boolean) = try {
@@ -175,6 +180,13 @@ class DockerApiService {
         false
     }
 
+    fun updateContainer(client: DockerClient?, id: String) = try {
+        client?.createContainerCmd(id)?.exec()
+    } catch (e: Exception) {
+        logger.error("Failed to update container $id", e)
+        throw e
+    }
+
     fun renameContainer(client: DockerClient?, id: String, name: String) = try {
         client?.renameContainerCmd(id)?.withName(name)?.exec()
         true
@@ -191,10 +203,51 @@ class DockerApiService {
         false
     }
 
+    fun resizeContainer(client: DockerClient?, id: String) = try {
+        client?.resizeContainerCmd(id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to resize container $id", e)
+        false
+    }
+
     fun topContainer(client: DockerClient?, id: String) = try {
         client?.topContainerCmd(id)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to execute top in container $id", e)
-        throw RuntimeException(e)
+        throw e
     }
+
+    fun pauseContainer(client: DockerClient?, id: String) = try {
+        client?.pauseContainerCmd(id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to pause container $id", e)
+        false
+    }
+
+    fun unpauseContainer(client: DockerClient?, id: String) = try {
+        client?.unpauseContainerCmd(id)?.exec()
+        true
+    } catch (e: Exception) {
+        logger.error("Failed to unpause container $id", e)
+        false
+    }
+
+    fun events(client: DockerClient?) = try {
+        val result = client?.eventsCmd()?.start() //TODO
+    } catch (e: Exception) {
+        logger.error("Failed to get events from server", e)
+        throw e
+    }
+
+    /*Swarm methods*/
+    fun inspectSwarm(client: DockerClient?) = try {
+        client?.inspectSwarmCmd()?.exec()
+    } catch (e: Exception) {
+        logger.error("Failed to inspect swarm", e)
+        throw e
+    }
+
+//    fun joinSwarm(client: DockerClient?)
 }
