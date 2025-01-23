@@ -1,13 +1,19 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.async.ResultCallback.Adapter
+import com.github.dockerjava.api.command.AsyncDockerCmd
+import com.github.dockerjava.api.command.PullImageCmd
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.api.model.PullResponseItem
 import com.github.dockerjava.api.model.PushResponseItem
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import ru.cib.clusterizer.dao.docker.Registry
@@ -15,6 +21,7 @@ import ru.cib.clusterizer.dao.docker.Tls
 import ru.cib.clusterizer.dao.rest.ImageRequest
 import java.io.ByteArrayInputStream
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 
 @Service
@@ -70,25 +77,68 @@ class DockerApiService {
 
     /*Methods for work with images on host*/
 
-    fun pullImage(client: DockerClient?, request: ImageRequest) = try {
-        client?.pullImageCmd("${request.name}:${request.tag}")?.exec(object : Adapter<PullResponseItem>() {
+    suspend fun pullImage(client: DockerClient?, request: ImageRequest) = try {
+        withContext(Dispatchers.IO) {
+            val pullCmd = client?.pullImageCmd("${request.name}:${request.tag}")
+            pullCmd.let {
+                it?.execWithCoroutine()
+            }
+        }
+    } catch (e: Exception) {
+        logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
+        false
+    }
+
+    private suspend fun PullImageCmd.execWithCoroutine() = suspendCancellableCoroutine { cont ->
+        val callback = object : Adapter<PullResponseItem>() {
             override fun onNext(item: PullResponseItem) {
                 logger.info(item.status)
                 super.onNext(item)
             }
+
             override fun onError(throwable: Throwable) {
                 logger.error("Error occurred $throwable")
-                super.onError(throwable)
+                if (!cont.isCompleted) {
+                    cont.resumeWith(Result.failure(throwable))
+                }
             }
+
             override fun onComplete() {
                 logger.info("Image pull completed")
-                super.onComplete()
+                if (!cont.isCompleted) {
+                    cont.resumeWith(Result.success(Unit))
+                }
             }
-        })?.awaitCompletion()
-    } catch (e: Exception) {
-        logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
-        throw e
+        }
+        exec(callback)
+        cont.invokeOnCancellation {
+            try {
+                callback.close()
+            } catch (e: Exception) {
+                logger.error("Error closing callback: $e")
+            }
+        }
     }
+
+//    fun pullImage(client: DockerClient?, request: ImageRequest) = try {
+//        client?.pullImageCmd("${request.name}:${request.tag}")?.exec(object : Adapter<PullResponseItem>() {
+//            override fun onNext(item: PullResponseItem) {
+//                logger.info(item.status)
+//                super.onNext(item)
+//            }
+//            override fun onError(throwable: Throwable) {
+//                logger.error("Error occurred $throwable")
+//                super.onError(throwable)
+//            }
+//            override fun onComplete() {
+//                logger.info("Image pull completed")
+//                super.onComplete()
+//            }
+//        })?.awaitCompletion(90, TimeUnit.SECONDS)
+//    } catch (e: Exception) {
+//        logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
+//        false
+//    }
 
     fun pushImage(client: DockerClient?, request: ImageRequest) = try {
         client?.pushImageCmd("${request.name}:${request.tag}")?.exec(object : Adapter<PushResponseItem>() {
@@ -96,15 +146,17 @@ class DockerApiService {
                 logger.info(item.status)
                 super.onNext(item)
             }
+
             override fun onError(throwable: Throwable) {
                 logger.error("Error occurred $throwable")
                 super.onError(throwable)
             }
+
             override fun onComplete() {
                 logger.info("Image push completed")
                 super.onComplete()
             }
-        })?.awaitCompletion()
+        })?.awaitCompletion(90, TimeUnit.SECONDS)
     } catch (e: Exception) {
         logger.error("Failed to push image ${request.name}:${request.tag} ", e)
         false
@@ -297,7 +349,7 @@ class DockerApiService {
     }
 
     fun events(client: DockerClient?) = try {
-        val result = client?.eventsCmd()?.start() //TODO
+        val result = client?.eventsCmd()?.start()
     } catch (e: Exception) {
         logger.error("Failed to get events from server", e)
         throw e
