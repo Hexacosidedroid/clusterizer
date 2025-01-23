@@ -64,7 +64,7 @@ class RestController(
     @PostMapping("/pullImage")
     suspend fun pullImage(@RequestBody request: ImageRequest): ResponseEntity<Any> {
         val result = dockerApiService.pullImage(client, request)
-        return if (result == true)
+        return if (result)
             ResponseEntity(HttpStatus.OK)
         else
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)

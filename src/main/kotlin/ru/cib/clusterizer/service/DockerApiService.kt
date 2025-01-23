@@ -1,9 +1,7 @@
 package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.async.ResultCallback.Adapter
-import com.github.dockerjava.api.command.AsyncDockerCmd
 import com.github.dockerjava.api.command.PullImageCmd
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.api.model.PullResponseItem
@@ -84,6 +82,7 @@ class DockerApiService {
                 it?.execWithCoroutine()
             }
         }
+        true
     } catch (e: Exception) {
         logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
         false
@@ -95,14 +94,12 @@ class DockerApiService {
                 logger.info(item.status)
                 super.onNext(item)
             }
-
             override fun onError(throwable: Throwable) {
                 logger.error("Error occurred $throwable")
                 if (!cont.isCompleted) {
                     cont.resumeWith(Result.failure(throwable))
                 }
             }
-
             override fun onComplete() {
                 logger.info("Image pull completed")
                 if (!cont.isCompleted) {
@@ -119,26 +116,6 @@ class DockerApiService {
             }
         }
     }
-
-//    fun pullImage(client: DockerClient?, request: ImageRequest) = try {
-//        client?.pullImageCmd("${request.name}:${request.tag}")?.exec(object : Adapter<PullResponseItem>() {
-//            override fun onNext(item: PullResponseItem) {
-//                logger.info(item.status)
-//                super.onNext(item)
-//            }
-//            override fun onError(throwable: Throwable) {
-//                logger.error("Error occurred $throwable")
-//                super.onError(throwable)
-//            }
-//            override fun onComplete() {
-//                logger.info("Image pull completed")
-//                super.onComplete()
-//            }
-//        })?.awaitCompletion(90, TimeUnit.SECONDS)
-//    } catch (e: Exception) {
-//        logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
-//        false
-//    }
 
     fun pushImage(client: DockerClient?, request: ImageRequest) = try {
         client?.pushImageCmd("${request.name}:${request.tag}")?.exec(object : Adapter<PushResponseItem>() {
