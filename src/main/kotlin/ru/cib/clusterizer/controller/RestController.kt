@@ -71,9 +71,9 @@ class RestController(
     }
 
     @PostMapping("/pushImage")
-    fun pushImage(@RequestBody request: ImageRequest): ResponseEntity<Any> {
+    suspend fun pushImage(@RequestBody request: ImageRequest): ResponseEntity<Any> {
         val result = dockerApiService.pushImage(client, request)
-        return if (result == true)
+        return if (result)
             ResponseEntity(HttpStatus.OK)
         else
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
