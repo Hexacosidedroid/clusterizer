@@ -4,13 +4,17 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback.Adapter
 import com.github.dockerjava.api.command.PullImageCmd
 import com.github.dockerjava.api.command.PushImageCmd
+import com.github.dockerjava.api.command.WaitContainerCmd
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.api.model.PullResponseItem
 import com.github.dockerjava.api.model.PushResponseItem
+import com.github.dockerjava.api.model.WaitResponse
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -18,60 +22,32 @@ import org.springframework.stereotype.Service
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
 import ru.cib.clusterizer.dao.rest.ImageRequest
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 private val logger = LoggerFactory.getLogger(DockerApiService::class.java)
 
-private suspend fun PullImageCmd.execWithCoroutine() = suspendCancellableCoroutine { cont ->
-    val callback = object : Adapter<PullResponseItem>() {
-        override fun onNext(item: PullResponseItem) {
-            logger.info(item.status)
-            super.onNext(item)
+private suspend fun <T, R> T.execWithCoroutine(
+    exec: T.(Adapter<R>) -> Unit,
+    onNext: (R) -> Unit = {},
+    log: String
+) = suspendCancellableCoroutine { cont ->
+    val callback = object : Adapter<R>() {
+        override fun onNext(item: R) {
+            logger.info("$log: $item")
+            onNext(item)
+            cont.resumeWith(Result.success(item))
         }
 
         override fun onError(throwable: Throwable) {
-            logger.error("Error pull $throwable")
+            logger.error("Error $log $throwable")
             if (!cont.isCompleted) {
                 cont.resumeWith(Result.failure(throwable))
             }
         }
 
         override fun onComplete() {
-            logger.info("Image pull completed")
-            if (!cont.isCompleted) {
-                cont.resumeWith(Result.success(Unit))
-            }
-        }
-    }
-    exec(callback)
-    cont.invokeOnCancellation {
-        try {
-            callback.close()
-        } catch (e: Exception) {
-            logger.error("Error closing callback: $e")
-        }
-    }
-}
-
-private suspend fun PushImageCmd.execWithCoroutine() = suspendCancellableCoroutine { cont ->
-    val callback = object : Adapter<PushResponseItem>() {
-        override fun onNext(item: PushResponseItem) {
-            logger.info(item.status)
-            super.onNext(item)
-        }
-
-        override fun onError(throwable: Throwable) {
-            logger.error("Error push $throwable")
-            if (!cont.isCompleted) {
-                cont.resumeWith(Result.failure(throwable))
-            }
-        }
-
-        override fun onComplete() {
-            logger.info("Image push completed")
+            logger.info("Image $log completed")
             if (!cont.isCompleted) {
                 cont.resumeWith(Result.success(Unit))
             }
@@ -142,7 +118,11 @@ class DockerApiService {
         withContext(Dispatchers.IO) {
             val pullCmd = client?.pullImageCmd("${request.name}:${request.tag}")
             pullCmd.let {
-                it?.execWithCoroutine()
+                it?.execWithCoroutine<PullImageCmd, PullResponseItem>(
+                    exec = { callback -> this.exec(callback) },
+                    onNext = { item -> logger.info(item.status) },
+                    log = "pull image"
+                )
             }
         }
         true
@@ -155,7 +135,11 @@ class DockerApiService {
         withContext(Dispatchers.IO) {
             val pushCmd = client?.pushImageCmd("${request.name}:${request.tag}")
             pushCmd.let {
-                it?.execWithCoroutine()
+                it?.execWithCoroutine<PushImageCmd, PushResponseItem>(
+                    exec = { callback -> this.exec(callback) },
+                    onNext = { item -> logger.info(item.status) },
+                    log = "push image"
+                )
             }
         }
         true
@@ -207,10 +191,10 @@ class DockerApiService {
         throw e
     }
 
-    fun saveImage(client: DockerClient?, name: String) = try {
-        client?.saveImageCmd(name)?.exec()
+    fun saveImage(client: DockerClient?, request: ImageRequest) = try {
+        client?.saveImageCmd(request.name)?.withTag(request.tag)?.exec()
     } catch (e: Exception) {
-        logger.error("Failed to save image $name ", e)
+        logger.error("Failed to save image ${request.name}:${request.tag} ", e)
         throw e
     }
 
@@ -246,7 +230,7 @@ class DockerApiService {
     }
 
     fun resizeExec(client: DockerClient?, id: String) = try {
-        client?.resizeExecCmd(id)?.exec()
+        client?.resizeExecCmd(id)?.exec() //TODO add size
         true
     } catch (e: Exception) {
         logger.error("Failed to resize container $id", e)
@@ -268,12 +252,24 @@ class DockerApiService {
         false
     }
 
-//    fun waitContainer(client: DockerClient?, id: String) = try {
-//        client?.waitContainerCmd(id).exec()
-//    } catch (e: Exception) {
-//        logger.error("Failed to wait container $id", e)
-//        throw e
-//    } //TODO
+    suspend fun waitContainer(client: DockerClient?, id: String): Flow<WaitResponse> = flow {
+        try {
+            withContext(Dispatchers.IO) {
+                val waitCmd = client?.waitContainerCmd(id)
+                waitCmd?.let {
+                    val response = it.execWithCoroutine<WaitContainerCmd, WaitResponse>(
+                        exec = { callback -> this.exec(callback) },
+                        onNext = {  },
+                        log = "wait container"
+                    )
+                    emit(response)
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to wait container $id", e)
+            throw e
+        }
+    }
 
     fun diffContainer(client: DockerClient?, id: String) = try {
         client?.containerDiffCmd(id)?.exec()

@@ -3,8 +3,11 @@ package ru.cib.clusterizer.controller
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Container
 import com.github.dockerjava.api.model.Version
+import com.github.dockerjava.api.model.WaitResponse
+import kotlinx.coroutines.flow.Flow
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
@@ -14,6 +17,7 @@ import ru.cib.clusterizer.dao.docker.Tls
 import ru.cib.clusterizer.dao.rest.DockerConfigRequest
 import ru.cib.clusterizer.dao.rest.ImageRequest
 import ru.cib.clusterizer.service.DockerApiService
+import java.util.stream.Collectors
 
 @RestController
 class RestController(
@@ -131,6 +135,15 @@ class RestController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
+    @GetMapping("/listOfImages")
+    fun getListOfImages(): ResponseEntity<Any> {
+        val result = dockerApiService.listOfImages(client)
+        return if (result != null)
+            ResponseEntity(result, HttpStatus.OK)
+        else
+            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
     @GetMapping("/inspectImage")
     fun inspectImage(
         @RequestParam("id") id: String
@@ -142,11 +155,13 @@ class RestController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/listOfImages")
-    fun getListOfImages(): ResponseEntity<Any> {
-        val result = dockerApiService.listOfImages(client)
+    @PostMapping("/saveImage")
+    fun saveImage(
+        @RequestBody request: ImageRequest
+    ) : ResponseEntity<Any> {
+        val result = dockerApiService.saveImage(client, request)
         return if (result != null)
-            ResponseEntity(result, HttpStatus.OK)
+            ResponseEntity(result, HttpStatus.OK) //TODO return as file
         else
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
@@ -205,6 +220,14 @@ class RestController(
             ResponseEntity(HttpStatus.OK)
         else
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/waitContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    suspend fun waitContainer(
+        @RequestParam("id") id: String
+    ) : Flow<WaitResponse> {
+        val result = dockerApiService.waitContainer(client, id)
+        return result
     }
 
     @GetMapping("/diffContainer")
