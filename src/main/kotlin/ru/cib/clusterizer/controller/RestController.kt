@@ -2,6 +2,7 @@ package ru.cib.clusterizer.controller
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Container
+import com.github.dockerjava.api.model.PullResponseItem
 import com.github.dockerjava.api.model.Version
 import com.github.dockerjava.api.model.WaitResponse
 import kotlinx.coroutines.flow.Flow
@@ -68,15 +69,12 @@ class RestController(
         }
     }
 
-    @PostMapping("/pullImage")
+    @PostMapping("/pullImage", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun pullImage(
         @RequestBody request: ImageRequest
-    ): ResponseEntity<Any> {
+    ): Flow<PullResponseItem> {
         val result = dockerApiService.pullImage(client, request)
-        return if (result)
-            ResponseEntity(HttpStatus.OK)
-        else
-            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+        return result
     }
 
     @PostMapping("/pushImage")

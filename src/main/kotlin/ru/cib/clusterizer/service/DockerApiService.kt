@@ -15,6 +15,7 @@ import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -46,7 +47,7 @@ private suspend fun <T, R> T.execWithCoroutine(
         }
 
         override fun onError(throwable: Throwable) {
-            logger.error("Error $log: $throwable")
+            logger.error("OnError $log: $throwable")
             if (!cont.isCompleted) {
                 cont.resumeWith(Result.failure(throwable))
             }
@@ -120,28 +121,28 @@ class DockerApiService {
 
     /*Methods for work with images on host*/
 
-    suspend fun pullImage(client: DockerClient?, request: ImageRequest) = try {
-        withContext(Dispatchers.IO) {
+    suspend fun pullImage(client: DockerClient?, request: ImageRequest): Flow<PullResponseItem> = flow {
+        try {
             val pullCmd = client?.pullImageCmd("${request.name}:${request.tag}")
-            pullCmd.let {
-                it?.execWithCoroutine<PullImageCmd, PullResponseItem>(
+            pullCmd?.let {
+                val response = it.execWithCoroutine<PullImageCmd, PullResponseItem>(
                     exec = { callback -> this.exec(callback) },
                     onNext = { item -> logger.info(item.status) },
                     log = "pull image"
                 )
+                emit(response)
             }
+        } catch (e: Exception) {
+            logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
+            throw e
         }
-        true
-    } catch (e: Exception) {
-        logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
-        false
-    }
+    }.flowOn(Dispatchers.IO)
 
     suspend fun pushImage(client: DockerClient?, request: ImageRequest) = try {
         withContext(Dispatchers.IO) {
             val pushCmd = client?.pushImageCmd("${request.name}:${request.tag}")
-            pushCmd.let {
-                it?.execWithCoroutine<PushImageCmd, PushResponseItem>(
+            pushCmd?.let {
+                it.execWithCoroutine<PushImageCmd, PushResponseItem>(
                     exec = { callback -> this.exec(callback) },
                     onNext = { item -> logger.info(item.status) },
                     log = "push image"
@@ -265,7 +266,7 @@ class DockerApiService {
                 waitCmd?.let {
                     val response = it.execWithCoroutine<WaitContainerCmd, WaitResponse>(
                         exec = { callback -> this.exec(callback) },
-                        onNext = { /* Опционально: обработка WaitResponse */ },
+                        onNext = { },
                         log = "wait container"
                     )
                     emit(response)
