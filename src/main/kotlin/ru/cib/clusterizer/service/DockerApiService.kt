@@ -13,7 +13,9 @@ import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -28,40 +30,31 @@ import java.time.Duration
 
 private val logger = LoggerFactory.getLogger(DockerApiService::class.java)
 
-private suspend fun <T, R> T.execWithCoroutine(
+private fun <T, R> T.execWithCoroutine(
     exec: T.(Adapter<R>) -> Unit,
     onNext: (R) -> Unit = {},
     log: String
-): R = suspendCancellableCoroutine { cont ->
+): Flow<R> = callbackFlow {
     val callback = object : Adapter<R>() {
-
-        private var hasResult = false
 
         override fun onNext(item: R) {
             logger.info("OnNext $log: $item")
             onNext(item)
-            if (!hasResult && !cont.isCompleted) {
-                hasResult = true
-                cont.resumeWith(Result.success(item))
-            }
+            trySend(item).isSuccess
         }
 
         override fun onError(throwable: Throwable) {
             logger.error("OnError $log: $throwable")
-            if (!cont.isCompleted) {
-                cont.resumeWith(Result.failure(throwable))
-            }
+            close(throwable)
         }
 
         override fun onComplete() {
             logger.info("OnComplete $log completed")
-            if (!cont.isCompleted) {
-                cont.resumeWith(Result.failure(IllegalStateException("Execution completed without emitting a result")))
-            }
+            close()
         }
     }
     exec(callback)
-    cont.invokeOnCancellation {
+    awaitClose {
         try {
             callback.close()
         } catch (e: Exception) {
@@ -69,6 +62,7 @@ private suspend fun <T, R> T.execWithCoroutine(
         }
     }
 }
+
 
 @Service
 class DockerApiService {
@@ -121,22 +115,19 @@ class DockerApiService {
 
     /*Methods for work with images on host*/
 
-    suspend fun pullImage(client: DockerClient?, request: ImageRequest): Flow<PullResponseItem> = flow {
-        try {
+    suspend fun pullImage(client: DockerClient?, request: ImageRequest): Flow<PullResponseItem> {
+        return try {
             val pullCmd = client?.pullImageCmd("${request.name}:${request.tag}")
-            pullCmd?.let {
-                val response = it.execWithCoroutine<PullImageCmd, PullResponseItem>(
-                    exec = { callback -> this.exec(callback) },
-                    onNext = { item -> logger.info(item.status) },
-                    log = "pull image"
-                )
-                emit(response)
-            }
+            pullCmd?.execWithCoroutine<PullImageCmd, PullResponseItem>(
+                exec = { callback -> this.exec(callback) },
+                onNext = { item -> logger.info(item.status) },
+                log = "pull image"
+            )?.flowOn(Dispatchers.IO) ?: flow { /* Нет команды для выполнения */ }
         } catch (e: Exception) {
             logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
-            throw e
+            flow { throw e }
         }
-    }.flowOn(Dispatchers.IO)
+    }
 
     suspend fun pushImage(client: DockerClient?, request: ImageRequest) = try {
         withContext(Dispatchers.IO) {
@@ -269,7 +260,7 @@ class DockerApiService {
                         onNext = { },
                         log = "wait container"
                     )
-                    emit(response)
+//                    emit(response)
                 }
             }
         } catch (e: Exception) {
