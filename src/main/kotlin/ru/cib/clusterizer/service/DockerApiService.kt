@@ -31,25 +31,31 @@ private suspend fun <T, R> T.execWithCoroutine(
     exec: T.(Adapter<R>) -> Unit,
     onNext: (R) -> Unit = {},
     log: String
-) = suspendCancellableCoroutine { cont ->
+): R = suspendCancellableCoroutine { cont ->
     val callback = object : Adapter<R>() {
+
+        private var hasResult = false
+
         override fun onNext(item: R) {
-            logger.info("$log: $item")
+            logger.info("OnNext $log: $item")
             onNext(item)
-            cont.resumeWith(Result.success(item))
+            if (!hasResult && !cont.isCompleted) {
+                hasResult = true
+                cont.resumeWith(Result.success(item))
+            }
         }
 
         override fun onError(throwable: Throwable) {
-            logger.error("Error $log $throwable")
+            logger.error("Error $log: $throwable")
             if (!cont.isCompleted) {
                 cont.resumeWith(Result.failure(throwable))
             }
         }
 
         override fun onComplete() {
-            logger.info("Image $log completed")
+            logger.info("OnComplete $log completed")
             if (!cont.isCompleted) {
-                cont.resumeWith(Result.success(Unit))
+                cont.resumeWith(Result.failure(IllegalStateException("Execution completed without emitting a result")))
             }
         }
     }
@@ -259,7 +265,7 @@ class DockerApiService {
                 waitCmd?.let {
                     val response = it.execWithCoroutine<WaitContainerCmd, WaitResponse>(
                         exec = { callback -> this.exec(callback) },
-                        onNext = {  },
+                        onNext = { /* Опционально: обработка WaitResponse */ },
                         log = "wait container"
                     )
                     emit(response)
@@ -270,6 +276,7 @@ class DockerApiService {
             throw e
         }
     }
+
 
     fun diffContainer(client: DockerClient?, id: String) = try {
         client?.containerDiffCmd(id)?.exec()
