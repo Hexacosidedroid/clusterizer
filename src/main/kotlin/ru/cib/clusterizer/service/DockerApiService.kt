@@ -19,6 +19,7 @@ import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
 import ru.cib.clusterizer.dao.rest.ImageRequest
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -163,17 +164,18 @@ class DockerApiService {
         false
     }
 
-    fun createImage(client: DockerClient?, repo: String) = try {
-        val inputStream = ByteArrayInputStream(ByteArray(0)) //TODO
+    fun createImage(client: DockerClient?, repo: String, inputStream: InputStream) = try {
         client?.createImageCmd(repo, inputStream)?.exec()
     } catch (e: Exception) {
         logger.error("Failed to create image ", e)
+        throw e
     }
 
-    fun loadImage(client: DockerClient?) = try {
-
+    fun loadImage(client: DockerClient?, inputStream: InputStream) = try {
+        client?.loadImageCmd(inputStream)
     } catch (e: Exception) {
         logger.error("Failed to load image ", e)
+        throw e
     }
 
     fun searchImages(client: DockerClient?, term: String) = try {
