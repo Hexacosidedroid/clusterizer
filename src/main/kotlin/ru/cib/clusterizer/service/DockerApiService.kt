@@ -2,10 +2,12 @@ package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback.Adapter
+import com.github.dockerjava.api.command.EventsCmd
 import com.github.dockerjava.api.command.LogContainerCmd
 import com.github.dockerjava.api.command.PullImageCmd
 import com.github.dockerjava.api.command.PushImageCmd
 import com.github.dockerjava.api.command.WaitContainerCmd
+import com.github.dockerjava.api.model.Event
 import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.api.model.PullResponseItem
@@ -256,19 +258,19 @@ class DockerApiService {
             log = "wait container"
         )?.flowOn(Dispatchers.IO) ?: flow { }
     } catch (e: Exception) {
-        logger.error("Failed to wait container $id", e)
+        logger.error("Failed to wait container $id: ", e)
         flow { throw e }
     }
 
     fun logContainer(client: DockerClient?, id: String) = try {
-        val logCmd = client?.logContainerCmd(id)
+        val logCmd = client?.logContainerCmd(id)?.withStdOut(true)
         logCmd?.execWithCoroutine<LogContainerCmd, Frame>(
             exec = { callback -> this.exec(callback) },
             onNext = { item -> logger.info(item.payload.decodeToString())},
             log = "log container"
         )?.flowOn(Dispatchers.IO) ?: flow { }
     }catch (e: Exception) {
-        logger.error("Failed to log container $id", e)
+        logger.error("Failed to log container $id: ", e)
         flow { throw e }
     }
 
@@ -349,10 +351,15 @@ class DockerApiService {
     }
 
     fun events(client: DockerClient?) = try {
-        val result = client?.eventsCmd()?.start()
-    } catch (e: Exception) {
-        logger.error("Failed to get events from server", e)
-        throw e
+        val eventsCmd = client?.eventsCmd()
+        eventsCmd?.execWithCoroutine<EventsCmd, Event>(
+            exec = { callback -> this.exec(callback) },
+            onNext = { item -> logger.info("$item")},
+            log = "host events"
+        )?.flowOn(Dispatchers.IO) ?: flow { }
+    }catch (e: Exception) {
+        logger.error("Failed to fetch events: ", e)
+        flow { throw e }
     }
 
     /*Swarm methods*/

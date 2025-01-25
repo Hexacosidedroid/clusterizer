@@ -1,6 +1,7 @@
 package ru.cib.clusterizer.config
 
 import io.etcd.jetcd.Client
+import io.etcd.jetcd.KV
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -10,5 +11,5 @@ class EtcdConfig(
 ) {
 
     @Bean
-    fun initializeClient(): Client = Client.builder().endpoints(etcdProperties.endpoint).build()
+    fun initializeClient(): KV = Client.builder().endpoints(etcdProperties.endpoint).build().kvClient
 }

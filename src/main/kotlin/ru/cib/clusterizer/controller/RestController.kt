@@ -1,12 +1,8 @@
 package ru.cib.clusterizer.controller
 
 import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.api.model.Container
-import com.github.dockerjava.api.model.PullResponseItem
-import com.github.dockerjava.api.model.Version
-import com.github.dockerjava.api.model.WaitResponse
+import com.github.dockerjava.api.model.*
 import kotlinx.coroutines.flow.Flow
-import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -18,11 +14,11 @@ import ru.cib.clusterizer.dao.docker.Tls
 import ru.cib.clusterizer.dao.rest.DockerConfigRequest
 import ru.cib.clusterizer.dao.rest.ImageRequest
 import ru.cib.clusterizer.service.DockerApiService
-import java.util.stream.Collectors
+import ru.cib.clusterizer.service.DockerConnectionService
 
 @RestController
 class RestController(
-    val dockerApiService: DockerApiService
+    private val apiService: DockerApiService
 ) {
     var client: DockerClient? = null
 
@@ -30,18 +26,18 @@ class RestController(
     fun setDockerConnection(
         @RequestBody config: DockerConfigRequest
     ): Version? {
-        client = dockerApiService.connect(
+        client = apiService.connect(
             config.host,
             Registry(config.url, config.user, config.password),
             Tls(config.verify, config.certPath)
         )
-        dockerApiService.ping(client)
-        return dockerApiService.version(client)
+        apiService.ping(client)
+        return apiService.version(client)
     }
 
     @GetMapping("/ping")
-    fun getPing(): ResponseEntity<String> {
-        val result = dockerApiService.ping(client)
+    fun getPing(): ResponseEntity<Any> {
+        val result = apiService.ping(client)
         return if (result) {
             ResponseEntity(HttpStatus.OK)
         } else {
@@ -51,7 +47,7 @@ class RestController(
 
     @GetMapping("/info")
     fun getInfo(): ResponseEntity<Any> {
-        val result = dockerApiService.info(client)
+        val result = apiService.info(client)
         return if (result != null) {
             ResponseEntity(result, HttpStatus.OK)
         } else {
@@ -61,7 +57,7 @@ class RestController(
 
     @GetMapping("/version")
     fun getVersion(): ResponseEntity<Any> {
-        val result = dockerApiService.version(client)
+        val result = apiService.version(client)
         return if (result != null) {
             ResponseEntity(result, HttpStatus.OK)
         } else {
@@ -73,19 +69,16 @@ class RestController(
     suspend fun pullImage(
         @RequestBody request: ImageRequest
     ): Flow<PullResponseItem> {
-        val result = dockerApiService.pullImage(client, request)
+        val result = apiService.pullImage(client, request)
         return result
     }
 
-    @PostMapping("/pushImage")
+    @PostMapping("/pushImage", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun pushImage(
         @RequestBody request: ImageRequest
-    ): ResponseEntity<Any> {
-        val result = dockerApiService.pushImage(client, request)
-        return if (result)
-            ResponseEntity(HttpStatus.OK)
-        else
-            ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    ): Flow<PushResponseItem> {
+        val result = apiService.pushImage(client, request)
+        return result
     }
 
     @PostMapping("/createImage")
@@ -93,7 +86,7 @@ class RestController(
         @RequestParam("repo") repo: String,
         @RequestParam("file") file: MultipartFile
     ): ResponseEntity<Any> {
-        val result = dockerApiService.createImage(client, repo, file.inputStream)
+        val result = apiService.createImage(client, repo, file.inputStream)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -104,7 +97,7 @@ class RestController(
     suspend fun loadImage(
         @RequestParam("file") file: MultipartFile
     ): ResponseEntity<Any> {
-        val result = dockerApiService.loadImage(client, file.inputStream)
+        val result = apiService.loadImage(client, file.inputStream)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -115,7 +108,7 @@ class RestController(
     fun searchImages(
         @RequestParam("search") term: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.searchImages(client, term)
+        val result = apiService.searchImages(client, term)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -126,7 +119,7 @@ class RestController(
     fun removeImage(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.removeImage(client, id)
+        val result = apiService.removeImage(client, id)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -135,7 +128,7 @@ class RestController(
 
     @GetMapping("/listOfImages")
     fun getListOfImages(): ResponseEntity<Any> {
-        val result = dockerApiService.listOfImages(client)
+        val result = apiService.listOfImages(client)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -146,7 +139,7 @@ class RestController(
     fun inspectImage(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.inspectImage(client, id)
+        val result = apiService.inspectImage(client, id)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -157,7 +150,7 @@ class RestController(
     fun saveImage(
         @RequestBody request: ImageRequest
     ) : ResponseEntity<Any> {
-        val result = dockerApiService.saveImage(client, request)
+        val result = apiService.saveImage(client, request)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK) //TODO return as file
         else
@@ -168,7 +161,7 @@ class RestController(
     fun getListOfContainers(
         @RequestParam("all") all: Boolean
     ): ResponseEntity<Any> {
-        val result = dockerApiService.listOfContainers(client, all)
+        val result = apiService.listOfContainers(client, all)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -179,7 +172,7 @@ class RestController(
     fun createContainer(
         @RequestBody request: ImageRequest
     ): ResponseEntity<Any> {
-        val result = dockerApiService.createContainer(client, request)
+        val result = apiService.createContainer(client, request)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -190,7 +183,7 @@ class RestController(
     fun startContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.startContainer(client, id)
+        val result = apiService.startContainer(client, id)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -201,7 +194,7 @@ class RestController(
     fun inspectContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.inspectContainer(client, id)
+        val result = apiService.inspectContainer(client, id)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -213,7 +206,7 @@ class RestController(
         @RequestParam("id") id: String,
         @RequestParam("force") force: Boolean
     ): ResponseEntity<Any> {
-        val result = dockerApiService.removeContainer(client, id, force)
+        val result = apiService.removeContainer(client, id, force)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -224,7 +217,15 @@ class RestController(
     suspend fun waitContainer(
         @RequestParam("id") id: String
     ) : Flow<WaitResponse> {
-        val result = dockerApiService.waitContainer(client, id)
+        val result = apiService.waitContainer(client, id)
+        return result
+    }
+
+    @GetMapping("/logContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    suspend fun logContainer(
+        @RequestParam("id") id: String
+    ) : Flow<Frame> {
+        val result = apiService.logContainer(client, id)
         return result
     }
 
@@ -232,7 +233,7 @@ class RestController(
     fun diffContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.diffContainer(client, id)
+        val result = apiService.diffContainer(client, id)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
@@ -243,7 +244,7 @@ class RestController(
     fun stopContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.stopContainer(client, id)
+        val result = apiService.stopContainer(client, id)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -254,7 +255,7 @@ class RestController(
     fun killContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.killContainer(client, id)
+        val result = apiService.killContainer(client, id)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -266,7 +267,7 @@ class RestController(
         @RequestParam("id") id: String,
         @RequestParam("name") name: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.renameContainer(client, id, name)
+        val result = apiService.renameContainer(client, id, name)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -277,7 +278,7 @@ class RestController(
     fun restartContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.restartContainer(client, id)
+        val result = apiService.restartContainer(client, id)
         return if (result)
             ResponseEntity(HttpStatus.OK)
         else
@@ -288,11 +289,17 @@ class RestController(
     fun topContainer(
         @RequestParam("id") id: String
     ): ResponseEntity<Any> {
-        val result = dockerApiService.topContainer(client, id)
+        val result = apiService.topContainer(client, id)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK)
         else
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    @GetMapping("/events", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    fun events(): Flow<Event> {
+        val result = apiService.events(client)
+        return result
     }
 
 }
