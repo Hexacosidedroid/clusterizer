@@ -2,9 +2,11 @@ package ru.cib.clusterizer.service
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback.Adapter
+import com.github.dockerjava.api.command.LogContainerCmd
 import com.github.dockerjava.api.command.PullImageCmd
 import com.github.dockerjava.api.command.PushImageCmd
 import com.github.dockerjava.api.command.WaitContainerCmd
+import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.Image
 import com.github.dockerjava.api.model.PullResponseItem
 import com.github.dockerjava.api.model.PushResponseItem
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -115,35 +118,30 @@ class DockerApiService {
 
     /*Methods for work with images on host*/
 
-    suspend fun pullImage(client: DockerClient?, request: ImageRequest): Flow<PullResponseItem> {
-        return try {
-            val pullCmd = client?.pullImageCmd("${request.name}:${request.tag}")
-            pullCmd?.execWithCoroutine<PullImageCmd, PullResponseItem>(
-                exec = { callback -> this.exec(callback) },
-                onNext = { item -> logger.info(item.status) },
-                log = "pull image"
-            )?.flowOn(Dispatchers.IO) ?: flow { /* Нет команды для выполнения */ }
-        } catch (e: Exception) {
-            logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
-            flow { throw e }
-        }
+    suspend fun pullImage(client: DockerClient?, request: ImageRequest): Flow<PullResponseItem> = try {
+        val pullCmd = client?.pullImageCmd("${request.name}:${request.tag}")
+        pullCmd?.execWithCoroutine<PullImageCmd, PullResponseItem>(
+            exec = { callback -> this.exec(callback) },
+            onNext = { item -> logger.info(item.status) },
+            log = "pull image"
+        )?.flowOn(Dispatchers.IO) ?: flow { }
+    } catch (e: Exception) {
+        logger.error("Failed to pull image ${request.name}:${request.tag} ", e)
+        flow { throw e }
     }
 
-    suspend fun pushImage(client: DockerClient?, request: ImageRequest) = try {
-        withContext(Dispatchers.IO) {
-            val pushCmd = client?.pushImageCmd("${request.name}:${request.tag}")
-            pushCmd?.let {
-                it.execWithCoroutine<PushImageCmd, PushResponseItem>(
-                    exec = { callback -> this.exec(callback) },
-                    onNext = { item -> logger.info(item.status) },
-                    log = "push image"
-                )
-            }
-        }
-        true
+
+    suspend fun pushImage(client: DockerClient?, request: ImageRequest): Flow<PushResponseItem> = try {
+        val pushCmd = client?.pushImageCmd("${request.name}:${request.tag}")
+        pushCmd?.execWithCoroutine<PushImageCmd, PushResponseItem>(
+            exec = { callback -> this.exec(callback) },
+            onNext = { item -> logger.info(item.status) },
+            log = "push image"
+        )?.flowOn(Dispatchers.IO) ?: flow { }
+
     } catch (e: Exception) {
         logger.error("Failed to push image ${request.name}:${request.tag} ", e)
-        false
+        flow { throw e }
     }
 
     fun createImage(client: DockerClient?, repo: String, inputStream: InputStream) = try {
@@ -250,25 +248,29 @@ class DockerApiService {
         false
     }
 
-    suspend fun waitContainer(client: DockerClient?, id: String): Flow<WaitResponse> = flow {
-        try {
-            withContext(Dispatchers.IO) {
-                val waitCmd = client?.waitContainerCmd(id)
-                waitCmd?.let {
-                    val response = it.execWithCoroutine<WaitContainerCmd, WaitResponse>(
-                        exec = { callback -> this.exec(callback) },
-                        onNext = { },
-                        log = "wait container"
-                    )
-//                    emit(response)
-                }
-            }
-        } catch (e: Exception) {
-            logger.error("Failed to wait container $id", e)
-            throw e
-        }
+    suspend fun waitContainer(client: DockerClient?, id: String): Flow<WaitResponse> = try {
+        val waitCmd = client?.waitContainerCmd(id)
+        waitCmd?.execWithCoroutine<WaitContainerCmd, WaitResponse>(
+            exec = { callback -> this.exec(callback) },
+            onNext = { item -> logger.info("${item.statusCode}") },
+            log = "wait container"
+        )?.flowOn(Dispatchers.IO) ?: flow { }
+    } catch (e: Exception) {
+        logger.error("Failed to wait container $id", e)
+        flow { throw e }
     }
 
+    fun logContainer(client: DockerClient?, id: String) = try {
+        val logCmd = client?.logContainerCmd(id)
+        logCmd?.execWithCoroutine<LogContainerCmd, Frame>(
+            exec = { callback -> this.exec(callback) },
+            onNext = { item -> logger.info(item.payload.decodeToString())},
+            log = "log container"
+        )?.flowOn(Dispatchers.IO) ?: flow { }
+    }catch (e: Exception) {
+        logger.error("Failed to log container $id", e)
+        flow { throw e }
+    }
 
     fun diffContainer(client: DockerClient?, id: String) = try {
         client?.containerDiffCmd(id)?.exec()
