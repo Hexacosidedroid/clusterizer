@@ -1,4 +1,6 @@
 spring:
   application:
     name: clusterizer
+etcd:
+  endpoint: "http://127.0.0.1:2379"
 

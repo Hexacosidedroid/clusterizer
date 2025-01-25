@@ -5,8 +5,10 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class EtcdConfig {
+class EtcdConfig(
+    private val etcdProperties: EtcdProperties
+) {
 
     @Bean
-    fun initializeConfig() = Client.builder().endpoints("http://127.0.0.1:2379").build()
+    fun initializeClient(): Client = Client.builder().endpoints(etcdProperties.endpoint).build()
 }
