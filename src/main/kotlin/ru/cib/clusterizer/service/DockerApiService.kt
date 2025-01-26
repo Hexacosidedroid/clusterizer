@@ -72,10 +72,10 @@ private fun <T, R> T.execWithCoroutine(
 class DockerApiService {
 
     /*Methods for work with server*/
-    fun connect(host: String, registry: Registry?, tls: Tls?): DockerClient {
+    fun connect(host: String?, registry: Registry?, tls: Tls?): DockerClient {
         try {
             val dockerConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().apply {
-                withDockerHost(host)
+                host?.let(::withDockerHost)
                 withDockerTlsVerify(tls?.verify)
                 withDockerCertPath(tls?.certPath)
                 withRegistryUrl(registry?.url)

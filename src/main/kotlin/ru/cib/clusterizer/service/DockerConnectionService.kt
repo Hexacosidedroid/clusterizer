@@ -18,7 +18,7 @@ class DockerConnectionService(
 
     fun saveConnection(configRequest: DockerConfigRequest) {
         etcdConfig.initializeClient().put(
-            ByteSequence.from(configRequest.host.toByteArray()),
+            ByteSequence.from(configRequest.host?.toByteArray()),
             ByteSequence.from(configRequest.toJson().toByteArray())
         )
     }
