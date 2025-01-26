@@ -68,7 +68,6 @@ private fun <T, R> T.execWithCoroutine(
     }
 }
 
-
 @Service
 class DockerApiService {
 
