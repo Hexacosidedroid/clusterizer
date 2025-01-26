@@ -4,7 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 
 data class DockerConfigRequest (
-    val host: String,
+    val host: String?,
     val verify: String?,
     val certPath: String?,
     val url: String?,
