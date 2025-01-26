@@ -2,6 +2,7 @@ package ru.cib.clusterizer.controller
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.*
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -9,18 +10,18 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import ru.cib.clusterizer.dao.docker.DockerLogRecord
 import ru.cib.clusterizer.dao.docker.Registry
 import ru.cib.clusterizer.dao.docker.Tls
 import ru.cib.clusterizer.dao.rest.DockerConfigRequest
 import ru.cib.clusterizer.dao.rest.ImageRequest
 import ru.cib.clusterizer.service.DockerApiService
-import ru.cib.clusterizer.service.DockerConnectionService
 
 @RestController
 class RestController(
     private val apiService: DockerApiService
 ) {
-    var client: DockerClient? = null
+    lateinit var client: DockerClient
 
     @PostMapping("/connect")
     fun setDockerConnection(
@@ -149,7 +150,7 @@ class RestController(
     @PostMapping("/saveImage")
     fun saveImage(
         @RequestBody request: ImageRequest
-    ) : ResponseEntity<Any> {
+    ): ResponseEntity<Any> {
         val result = apiService.saveImage(client, request)
         return if (result != null)
             ResponseEntity(result, HttpStatus.OK) //TODO return as file
@@ -216,16 +217,18 @@ class RestController(
     @GetMapping("/waitContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun waitContainer(
         @RequestParam("id") id: String
-    ) : Flow<WaitResponse> {
+    ): Flow<WaitResponse> {
         val result = apiService.waitContainer(client, id)
         return result
     }
 
     @GetMapping("/logContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun logContainer(
-        @RequestParam("id") id: String
-    ) : Flow<Frame> {
-        val result = apiService.logContainer(client, id)
+        @RequestParam("id") id: String,
+        @RequestParam("follow") follow: Boolean = true,
+        @RequestParam("tail") tail: Int? = null
+    ): Flow<DockerLogRecord> {
+        val result = apiService.logContainer(client, id, follow, tail)
         return result
     }
 
@@ -297,7 +300,7 @@ class RestController(
     }
 
     @GetMapping("/events", produces = [MediaType.APPLICATION_NDJSON_VALUE])
-    fun events(): Flow<Event> {
+    suspend fun events(): Flow<Event> {
         val result = apiService.events(client)
         return result
     }
