@@ -19,7 +19,7 @@ class DockerImageController(
     private val apiServices: Map<ConfigId, DockerApiService>
 ) {
 
-    @PostMapping("/image/{configId}/pullImage", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    @PostMapping("/{configId}/image/pullImage", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun pullImage(
         @RequestBody request: ImageRequest,
         @PathVariable("configId") configId: ConfigId,
@@ -30,7 +30,7 @@ class DockerImageController(
         return result
     }
 
-    @PostMapping("/image/{configId}/pushImage", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    @PostMapping("/{configId}/image/pushImage", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun pushImage(
         @RequestBody request: ImageRequest,
         @PathVariable("configId") configId: ConfigId
@@ -41,7 +41,7 @@ class DockerImageController(
         return result
     }
 
-    @PostMapping("/image/{configId}/createImage")
+    @PostMapping("/{configId}/image/createImage")
     fun createImage(
         @RequestParam("repo") repo: String,
         @RequestParam("file") file: MultipartFile,
@@ -56,7 +56,7 @@ class DockerImageController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/image/{configId}/loadImage")
+    @PostMapping("/{configId}/image/loadImage")
     suspend fun loadImage(
         @RequestParam("file") file: MultipartFile,
         @PathVariable("configId") configId: ConfigId
@@ -70,7 +70,7 @@ class DockerImageController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/image/{configId}/searchImages")
+    @GetMapping("/{configId}/image/searchImages")
     fun searchImages(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("search") term: String
@@ -84,7 +84,7 @@ class DockerImageController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @DeleteMapping("/image/{configId}/removeImage")
+    @DeleteMapping("/{configId}/image/removeImage")
     fun removeImage(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -98,7 +98,7 @@ class DockerImageController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/image/{configId}/listOfImages")
+    @GetMapping("/{configId}/image/listOfImages")
     fun getListOfImages(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -109,7 +109,7 @@ class DockerImageController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/image/{configId}/inspectImage")
+    @GetMapping("/{configId}/image/inspectImage")
     fun inspectImage(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -123,7 +123,7 @@ class DockerImageController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/image/{configId}/saveImage")
+    @PostMapping("/{configId}/image/saveImage")
     fun saveImage(
         @PathVariable("configId") configId: ConfigId,
         @RequestBody request: ImageRequest,
