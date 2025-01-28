@@ -9,4 +9,4 @@ docker:
     local:
       target:
         type: local
-        path: "unix:///var/run/docker/sock"
+        path: "unix:///var/run/docker.sock"

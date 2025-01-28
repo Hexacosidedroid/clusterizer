@@ -15,7 +15,7 @@ import ru.cib.clusterizer.domain.docker.DockerLogRecord
 
 @CrossOrigin
 @RestController
-@RequestMapping("docker")
+@RequestMapping("api/docker")
 class DockerController(
     private val apiServices: Map<ConfigId, DockerApiService>
 ) {
@@ -177,7 +177,7 @@ class DockerController(
     @GetMapping("/{configId}/listOfContainers")
     fun getListOfContainers(
         @PathVariable("configId") configId: ConfigId,
-        @RequestParam("all") all: Boolean
+        @RequestParam("all") all: Boolean = false
     ): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
