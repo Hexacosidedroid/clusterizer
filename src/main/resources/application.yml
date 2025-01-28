@@ -4,3 +4,9 @@ spring:
 etcd:
   endpoint: "http://127.0.0.1:2379"
 
+docker:
+  connections:
+    local:
+      target:
+        type: local
+        path: "unix:///var/run/docker/sock"
