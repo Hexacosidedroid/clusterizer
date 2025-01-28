@@ -17,7 +17,7 @@ class DockerClientController(
     private val apiServices: Map<ConfigId, DockerApiService>
 ) {
 
-    @GetMapping("/client/{configId}/ping")
+    @GetMapping("/{configId}/client/ping")
     fun getPing(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -29,7 +29,7 @@ class DockerClientController(
         }
     }
 
-    @GetMapping("/client/{configId}/info")
+    @GetMapping("/{configId}/client/info")
     fun getInfo(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -41,7 +41,7 @@ class DockerClientController(
         }
     }
 
-    @GetMapping("/client/{configId}/version")
+    @GetMapping("/{configId}/client/version")
     fun getVersion(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -53,7 +53,7 @@ class DockerClientController(
         }
     }
 
-    @GetMapping("/client/{configId}/events", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    @GetMapping("/{configId}/client/events", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun events(@PathVariable("configId") configId: ConfigId): Flow<Event> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")

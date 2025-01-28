@@ -281,6 +281,15 @@ class DockerApiService(
         }.onFailure { dockerApiLogger.error("Failed to fetch events: ", it) }.getOrThrow()
     }
 
+    suspend fun statsContainer(id: String) = coroutineScope {
+        runCatching {
+            val statsCmd = client.statsCmd(id)
+            statsCmd.asFlow<Statistics>("Host statistics") { item -> dockerApiLogger.info("$item") }
+                .flowOn(Dispatchers.IO)
+        }.onFailure { dockerApiLogger.error("Failed to fetch stats: ", it) }.getOrThrow()
+    }
+
+
     /*Swarm methods*/
     fun inspectSwarm() = try {
         client.inspectSwarmCmd().exec()
