@@ -1,4 +1,4 @@
-package ru.cib.clusterizer.config
+package ru.cib.clusterizer.config.etcd
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
