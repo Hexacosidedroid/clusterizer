@@ -11,14 +11,13 @@ import ru.cib.clusterizer.domain.config.ConfigId
 import ru.cib.clusterizer.domain.docker.DockerApiService
 import ru.cib.clusterizer.domain.docker.DockerLogRecord
 
-@CrossOrigin
 @RestController
-@RequestMapping("api/docker")
+@RequestMapping("api/docker/container")
 class DockerContainerController(
     private val apiServices: Map<ConfigId, DockerApiService>
 ) {
     
-    @GetMapping("/container/{configId}/listOfContainers")
+    @GetMapping("/{configId}/listOfContainers")
     fun getListOfContainers(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("all") all: Boolean
@@ -32,7 +31,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/container/{configId}/createContainer")
+    @PostMapping("/{configId}/createContainer")
     fun createContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestBody request: ImageRequest
@@ -46,7 +45,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/container/{configId}/startContainer")
+    @PostMapping("/{configId}/startContainer")
     fun startContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -60,7 +59,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/container/{configId}/inspectContainer")
+    @GetMapping("/{configId}/inspectContainer")
     fun inspectContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -74,7 +73,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @DeleteMapping("/container/{configId}/removeContainer")
+    @DeleteMapping("/{configId}/removeContainer")
     fun removeContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String,
@@ -90,7 +89,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/container/{configId}/waitContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    @GetMapping("/{configId}/waitContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     suspend fun waitContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -101,20 +100,7 @@ class DockerContainerController(
         return result
     }
 
-    @GetMapping("/container/{configId}/logContainer", produces = [MediaType.APPLICATION_NDJSON_VALUE])
-    suspend fun logContainer(
-        @PathVariable("configId") configId: ConfigId,
-        @RequestParam("id") id: String,
-        @RequestParam("follow") follow: Boolean = true,
-        @RequestParam("tail") tail: Int? = null
-    ): Flow<DockerLogRecord> {
-        val apiService = apiServices[configId]
-            ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
-        val result = apiService.logContainer(id, follow, tail)
-        return result
-    }
-
-    @GetMapping("/container/{configId}/diffContainer")
+    @GetMapping("/{configId}/diffContainer")
     fun diffContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -128,7 +114,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/container/{configId}/stopContainer")
+    @PostMapping("/{configId}/stopContainer")
     fun stopContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -142,7 +128,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @DeleteMapping("/container/{configId}/killContainer")
+    @DeleteMapping("/{configId}/killContainer")
     fun killContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -156,7 +142,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/container/{configId}/renameContainer")
+    @PostMapping("/{configId}/renameContainer")
     fun renameContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String,
@@ -171,7 +157,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @PostMapping("/container/{configId}/restartContainer")
+    @PostMapping("/{configId}/restartContainer")
     fun restartContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String
@@ -185,7 +171,7 @@ class DockerContainerController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 
-    @GetMapping("/container/{configId}/topContainer")
+    @GetMapping("/{configId}/topContainer")
     fun topContainer(
         @PathVariable("configId") configId: ConfigId,
         @RequestParam("id") id: String

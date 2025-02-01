@@ -1,23 +1,21 @@
 package ru.cib.clusterizer.controller
 
-import com.github.dockerjava.api.model.*
-import kotlinx.coroutines.flow.Flow
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.cib.clusterizer.domain.config.ConfigId
 import ru.cib.clusterizer.domain.docker.DockerApiService
 
-@CrossOrigin
 @RestController
-@RequestMapping("api/docker")
+@RequestMapping("api/docker/client")
 class DockerClientController(
     private val apiServices: Map<ConfigId, DockerApiService>
 ) {
 
-    @GetMapping("/client/{configId}/ping")
+    @GetMapping("/{configId}/ping")
     fun getPing(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -29,7 +27,7 @@ class DockerClientController(
         }
     }
 
-    @GetMapping("/client/{configId}/info")
+    @GetMapping("/{configId}/info")
     fun getInfo(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -41,7 +39,7 @@ class DockerClientController(
         }
     }
 
-    @GetMapping("/client/{configId}/version")
+    @GetMapping("/{configId}/version")
     fun getVersion(@PathVariable("configId") configId: ConfigId): ResponseEntity<Any> {
         val apiService = apiServices[configId]
             ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
@@ -52,13 +50,4 @@ class DockerClientController(
             ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR)
         }
     }
-
-    @GetMapping("/client/{configId}/events", produces = [MediaType.APPLICATION_NDJSON_VALUE])
-    suspend fun events(@PathVariable("configId") configId: ConfigId): Flow<Event> {
-        val apiService = apiServices[configId]
-            ?: throw RuntimeException("<b525a66c> Api service for $configId is not found")
-        val result = apiService.events()
-        return result
-    }
-
 }
