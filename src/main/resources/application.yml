@@ -1,6 +1,11 @@
 spring:
   application:
     name: clusterizer
+  rsocket:
+    server:
+      port: 7000
+      transport: tcp
+      mapping-path: /rsocket
 etcd:
   endpoint: "http://127.0.0.1:2379"
 
