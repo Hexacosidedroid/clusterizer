@@ -4,16 +4,18 @@ server:
 spring:
   application:
     name: clusterizer
-  rsocket:
-    server:
-      transport: websocket
-      mapping-path: /rsocket
+
 etcd:
   endpoint: "http://127.0.0.1:2379"
+
+logging:
+  level:
+    org.springframework.messaging.rsocket: TRACE
+    io.rsocket: DEBUG
 
 docker:
   connections:
     local:
       target:
         type: local
-        path: "unix:///var/run/docker.sock"
+        path: "unix:///Users/slava_ivanov_saikyo/.docker/run/docker.sock"

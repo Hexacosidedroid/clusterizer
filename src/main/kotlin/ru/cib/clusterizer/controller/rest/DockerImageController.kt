@@ -1,10 +1,6 @@
-package ru.cib.clusterizer.controller
+package ru.cib.clusterizer.controller.rest
 
-import com.github.dockerjava.api.model.PullResponseItem
-import com.github.dockerjava.api.model.PushResponseItem
-import kotlinx.coroutines.flow.Flow
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile

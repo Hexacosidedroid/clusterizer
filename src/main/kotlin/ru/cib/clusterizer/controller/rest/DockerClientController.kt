@@ -1,4 +1,4 @@
-package ru.cib.clusterizer.controller
+package ru.cib.clusterizer.controller.rest
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

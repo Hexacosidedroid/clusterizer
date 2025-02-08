@@ -1,4 +1,4 @@
-package ru.cib.clusterizer.controller
+package ru.cib.clusterizer.controller.rest
 
 import com.github.dockerjava.api.model.WaitResponse
 import kotlinx.coroutines.flow.Flow
@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*
 import ru.cib.clusterizer.dao.rest.ImageRequest
 import ru.cib.clusterizer.domain.config.ConfigId
 import ru.cib.clusterizer.domain.docker.DockerApiService
-import ru.cib.clusterizer.domain.docker.DockerLogRecord
 
 @RestController
 @RequestMapping("api/docker/container")
