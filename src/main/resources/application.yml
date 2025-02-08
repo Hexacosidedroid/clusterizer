@@ -18,4 +18,4 @@ docker:
     local:
       target:
         type: local
-        path: "unix:///Users/slava_ivanov_saikyo/.docker/run/docker.sock"
+        path: "unix:///var/run/docker.sock"
